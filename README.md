@@ -1,29 +1,42 @@
-# Experiment - limit-aws-creds-to-account
+# Experiment - Limit AWS Credentials
 
-This was an experiment to see if we could limit an AWS IAM user's credentials to an account.
+This was an experiment to see how we could limit an AWS IAM user's credentials.
+
+**Limits:**
+* Limit AWS credentials to a VPC through a VPC Endpoint.
+* Limit AWS credentials to a source IP.
 
 **Findings:**
 
 * It's possible to limit AWS credentials to a VPC through a VPC endpoint. This is because we can filter our traffic through it and use `aws:SourceVpce` in our IAM conditional.
+* It's possible to limit AWS credentials to a source ip.
 
 ## Useful Links
 
+* https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html#policy-eval-denyallow
 * https://docs.aws.amazon.com/AmazonS3/latest/userguide/example-bucket-policies-vpc-endpoint.html#example-bucket-policies-restrict-accesss-vpc-endpoint
 * https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html#condition-keys-sourcevpce
 
 ## Run the Test
 
-1. Apply the terraform code:
+1. Edit `terraform/terraform.tfvars` and add the missing variables from `terraform/vars.tf`.
+   1. `vpc_id` is the ID of the VPC that you would like to test with.
+   2. `subnet_id` is the ID of the subnet that you would like to test with.
+   3. `local_ip` is your current public ip address.
+2. Apply the terraform code:
    ```bash
    cd terraform
    terraform init
    terraform apply
    ```
-2. Go to the AWS console and generate IAM credentials for the `experiment-user`.
-3. SSH into the test server. Terraform should have given you its DNS name in its output.
-4. Export the generated IAM credentials in your shell on the test server.
-5. Run the following test:
-    ```bash
-    aws ec2 describe-instances --region=eu-central-1
-    ```
-6. Run the test outside the VPC (it shouldn't work).
+3. Go to the AWS console and generate IAM credentials for the users `experiment-allow-vpce` and `experiment-allow-source-ip`.
+4. On your local machine:
+   1. Export the generated IAM credentials for the user `experiment-allow-source-ip` to your shell.
+   2. Run `aws ec2 describe-instances --region=eu-central-1`. It should work.
+   3. Export the generated IAM credentials for the user `experiment-allow-vpce` to your shell.
+   4. Run `aws ec2 describe-instances --region=eu-central-1`. It shouldn't work.
+5. SSH into the test server. Terraform should have given you its DNS name in its output.
+   1. Export the generated IAM credentials for the user `experiment-allow-source-ip` to your shell.
+   2. Run `aws ec2 describe-instances --region=eu-central-1`. It shouldn't work.
+   3. Export the generated IAM credentials for the user `experiment-allow-vpce` to your shell.
+   4. Run `aws ec2 describe-instances --region=eu-central-1`. It should work.
